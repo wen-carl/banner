@@ -3,6 +3,7 @@ package com.youth.banner;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
@@ -505,12 +506,13 @@ public class Banner extends FrameLayout implements OnPageChangeListener {
         }
 
         @Override
-        public boolean isViewFromObject(View view, Object object) {
+        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
             return view == object;
         }
 
+        @NonNull
         @Override
-        public Object instantiateItem(ViewGroup container, final int position) {
+        public Object instantiateItem(@NonNull ViewGroup container, final int position) {
             container.addView(imageViews.get(position));
             View view = imageViews.get(position);
             if (bannerListener != null) {
