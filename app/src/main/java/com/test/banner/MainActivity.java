@@ -21,6 +21,7 @@ import com.test.banner.demo.CustomViewPagerActivity;
 import com.test.banner.demo.IndicatorPositionActivity;
 import com.test.banner.loader.GlideImageLoader;
 import com.youth.banner.Banner;
+import com.youth.banner.BannerConfig;
 import com.youth.banner.listener.OnBannerListener;
 
 import java.util.ArrayList;
@@ -63,14 +64,15 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         listView.setAdapter(new SampleAdapter(this,data));
         listView.setOnItemClickListener(this);
 
+        String[] titles = new String[] {"0", "1", "2", "3", "4"};
         //简单使用
         banner.setImages(App.images)
+                .setBannerTitles(Arrays.asList(titles))
                 .setImageLoader(new GlideImageLoader())
+                .setBannerStyle(BannerConfig.CIRCLE_INDICATOR_TITLE)
                 .setOnBannerListener(this)
                 .isAutoPlay(false)
                 .start();
-
-
     }
 
     @Override

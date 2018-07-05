@@ -549,6 +549,7 @@ public class Banner extends FrameLayout implements OnPageChangeListener {
             mOnPageChangeListener.onPageScrollStateChanged(state);
         }
 //        Log.i(tag,"currentItem: "+currentItem);
+        Log.e("123", "currentItem: " + currentItem + "  count: " + count);
         switch (state) {
             case 0://No operation
                 if (currentItem == 0) {
@@ -579,6 +580,7 @@ public class Banner extends FrameLayout implements OnPageChangeListener {
     @Override
     public void onPageSelected(int position) {
         currentItem=position;
+        Log.e("123", "currentItem: " + currentItem);
         if (mOnPageChangeListener != null) {
             mOnPageChangeListener.onPageSelected(toRealPosition(position));
         }
