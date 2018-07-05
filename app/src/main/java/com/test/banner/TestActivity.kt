@@ -29,6 +29,30 @@ class TestActivity : AppCompatActivity() {
         list.add(Data("4", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2e7vsaj30ci08cglz.jpg"))
 
         easyBanner.setAdapter(MyAdapter(this, list))
+
+        btn_stop.setOnClickListener {
+            easyBanner.stop()
+        }
+
+        btn_pause.setOnClickListener {
+            easyBanner.pause()
+        }
+
+        btn_start.setOnClickListener {
+            easyBanner.start()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        easyBanner.start()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        easyBanner.pause()
     }
 }
 
