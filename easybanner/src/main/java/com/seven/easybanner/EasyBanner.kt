@@ -7,24 +7,53 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import com.seven.easybanner.adapter.BaseAdapter
 import android.widget.FrameLayout
+import com.seven.easybanner.model.Data
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.android.UI
-import java.util.*
-import kotlin.concurrent.timerTask
-import kotlin.math.max
-import kotlin.math.min
 
 class EasyBanner(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : FrameLayout(context, attrs, defStyleAttr), ViewPager.OnPageChangeListener {
 
     private var mViewPager: ViewPager
     private var mTouching = false
+
     var isAutoPlay = true
+        set(value) {
+            if (value && status != BannerStatus.AutoPlaying) {
+                pause()
+                start()
+            }
+
+            status = if (value)
+                BannerStatus.AutoPlaying
+            else
+                BannerStatus.ManualPlaying
+
+            field = value
+        }
+
     var timeInterval = 2000L
+        set(value) {
+            if (value != field) {
+                field = value
+
+                start()
+            }
+        }
+
+    var status = BannerStatus.NotStart
+        private set
+
     var direction = Direction.Positive
-    var mBaseAdapter: BaseAdapter? = null
+    var adapter: BaseAdapter<Data>? = null
+        set(value) {
+            field = value
+
+            mViewPager.adapter = value
+            mViewPager.currentItem = 1
+        }
 
     private var count: Int = 0
-        get() = mBaseAdapter?.mData?.size ?: 0
+        get() = adapter?.data?.size ?: 0
 
     init {
         val mainContent = LayoutInflater.from(context).inflate(R.layout.layout_easy_banner, this, true)
@@ -38,6 +67,7 @@ class EasyBanner(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : Fr
 
     fun setAutoPlay(enable: Boolean) : EasyBanner {
         isAutoPlay = enable
+
         return this
     }
 
@@ -65,17 +95,20 @@ class EasyBanner(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : Fr
         }
     }
 
-    fun setAdapter(adapter: BaseAdapter) : EasyBanner {
-        mBaseAdapter = adapter
-        mViewPager.adapter = mBaseAdapter
-        mViewPager.currentItem = 1
+    fun setAdapter(adapter: BaseAdapter<Data>) : EasyBanner {
+        this.adapter = adapter
 
         return this
     }
 
     fun start() {
-
-        if (isAutoPlay) {
+        val shouldStart = when (status) {
+            BannerStatus.AutoPlaying,
+            BannerStatus.Paused,
+            BannerStatus.Stoped -> true
+            else -> false
+        }
+        if (isAutoPlay && shouldStart) {
             if (null == mLoopTask) {
                 mLoopTask = getAutoPlayTask()
             }
@@ -88,13 +121,21 @@ class EasyBanner(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : Fr
 
     fun stop() {
         pause()
+        status = BannerStatus.Stoped
+        
+        val position = when (direction) {
+           Direction.Positive   -> 0
+           else                 -> 2
+        }
 
+        mViewPager.setCurrentItem(position, false)
         mViewPager.currentItem = 1
     }
 
     fun pause() {
         mLoopTask?.cancel()
         mLoopTask = null
+        status = BannerStatus.Paused
     }
 
     fun showPrevious() {
@@ -159,18 +200,25 @@ class EasyBanner(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : Fr
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
 
-        if (isAutoPlay) {
-            val action = ev.action
-            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
-                || action == MotionEvent.ACTION_OUTSIDE
-            ) {
-                mTouching = false
-            } else if (action == MotionEvent.ACTION_DOWN) {
-                mTouching = true
-            }
+        val action = ev.action
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
+            || action == MotionEvent.ACTION_OUTSIDE
+        ) {
+            mTouching = false
+        } else if (action == MotionEvent.ACTION_DOWN) {
+            mTouching = true
         }
+
         return super.dispatchTouchEvent(ev)
     }
+}
+
+enum class BannerStatus {
+    NotStart,
+    AutoPlaying,
+    ManualPlaying,
+    Paused,
+    Stoped
 }
 
 enum class Direction {

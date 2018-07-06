@@ -9,73 +9,68 @@ import com.seven.easybanner.model.Data
 private const val DEFAULT_TYPE = -1
 private const val KEY_UNUSED = -1
 
-abstract class BaseAdapter(val context: Context, data: List<Data>) : PagerAdapter() {
+abstract class BaseAdapter<T>(val context: Context, data: List<T>) : PagerAdapter() where T : Data {
 
-    var mData: List<Data> = emptyList()
+    var data: List<T> = emptyList()
         set(value) {
             field = value
             updateMockedData()
         }
 
-    private var mMockData: List<Data> = emptyList()
-
-    init {
-        mData = data
-    }
-
-    private fun updateMockedData() {
-        mMockData = if (mData.size > 1) {
-            val temp = mData.toMutableList()
-            val first = temp[0]
-            val last = temp[temp.size - 1]
-            temp.add(0, last)
-            temp.add(first)
-            temp.toList()
-        } else {
-            mData
+    private var mMockData: List<T> = emptyList()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
         }
 
-        notifyDataSetChanged()
-    }
+    private val mCachedViewHolders: MutableMap<Int, MutableMap<Int, View>> = mutableMapOf()
+    private val mShowingViewHolders: MutableMap<Int, View> = mutableMapOf()
 
-    private val mCachedViews: MutableMap<Int, MutableMap<Int, View>> = mutableMapOf()
-    private val mShowingViews: MutableMap<Int, View> = mutableMapOf()
+    private var mOnClickListener: OnBannerClickListener? = null
+    private var mOnLongClickListener: OnBannerLongClickListener? = null
+
+    init {
+        this.data = data
+    }
 
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
 
         val type = getViewType(position)
-        val tempMap = mCachedViews[type]
+        val tempMap = mCachedViewHolders[type]
 
-        var view: View? = null
+        var holder: View? = null
         if (null != tempMap) {
-            view = tempMap[KEY_UNUSED]
+            holder = tempMap[KEY_UNUSED]
             tempMap.remove(KEY_UNUSED)
         }
 
-        if (null == view) {
-            view = onCreatView(context, container, position, type)
+        if (null == holder) {
+            holder = onCreateView(context, container, getRealPosition(position), type)
         }
 
-        onDisplay(view, position, mMockData[position])
+        container.addView(holder)
+        onDisplay(holder, getRealPosition(position), mMockData[position])
 
-        mShowingViews[position] = view
-        container.addView(view)
-        return view
+        mShowingViewHolders[position] = holder
+
+        holder.tag = position
+        setClickListener(holder, position)
+
+        return holder
     }
 
     override fun destroyItem(container: ViewGroup, position: Int, `object`: Any) {
-        //super.destroyItem(container, position, `object`)
-        val view = `object` as View
-        container.removeView(view)
-        mShowingViews.remove(position)
+        val holder = `object` as View
+        container.removeView(holder)
+        mShowingViewHolders.remove(position)
 
         val type = getViewType(position)
-        var tempMap = mCachedViews[type]
+        var tempMap = mCachedViewHolders[type]
         if (null == tempMap) {
             tempMap = mutableMapOf()
-            mCachedViews[type] = tempMap
+            mCachedViewHolders[type] = tempMap
         }
-        tempMap[KEY_UNUSED] = view
+        tempMap[type] = holder
     }
 
     override fun isViewFromObject(view: View, `object`: Any): Boolean {
@@ -90,7 +85,135 @@ abstract class BaseAdapter(val context: Context, data: List<Data>) : PagerAdapte
         return DEFAULT_TYPE
     }
 
-    abstract fun onCreatView(context: Context, parent: ViewGroup, position: Int, viewType: Int) : View
+    abstract fun onCreateView(context: Context, parent: ViewGroup, position: Int, viewType: Int) : View
 
-    abstract fun onDisplay(view: View, position: Int, model: Data)
+    abstract fun onDisplay(holder: View, position: Int, model: T)
+
+    fun setOnBannerClickListener(listener: OnBannerClickListener) : BaseAdapter<T> {
+        mOnClickListener = listener
+
+        return this
+    }
+
+    fun setOnBannerLongClickListener(listener: OnBannerLongClickListener) : BaseAdapter<T> {
+        mOnLongClickListener = listener
+
+        return this
+    }
+
+    private fun setClickListener(holder: View, position: Int) {
+        if (!holder.hasOnClickListeners()) {
+            holder.setOnClickListener {
+                val real = getRealPosition(it.tag as Int)
+                mOnClickListener?.onBannerClicked(it, real, data[real])
+
+                mOnLongClickListener?.onBannerLongClicked(it, position, data[real])
+            }
+        }
+    }
+
+    private fun getRealPosition(position: Int) : Int {
+        var real = 0
+        if (data.size <= 1) {
+            real = 0
+        } else {
+            real = (position - 1) % data.size
+            if (real < 0) {
+                real += data.size
+            }
+        }
+
+        return real
+    }
+
+    private fun updateMockedData() {
+        mMockData = if (data.size > 1) {
+            val temp = data.toMutableList()
+            val first = temp[0]
+            val last = temp[temp.size - 1]
+            temp.add(0, last)
+            temp.add(first)
+            temp.toList()
+        } else {
+            data
+        }
+    }
+
+    fun bindData(data: List<T>) {
+        this.data = data
+    }
+
+    fun add(index: Int, model: T) {
+        val temp = data.toMutableList()
+        temp.add(index, model)
+        this.data = temp.toList()
+    }
+
+    fun add(model: T) : Boolean {
+        val temp = data.toMutableList()
+        val result = temp.add(model)
+        if (result) {
+            this.data = temp.toList()
+        }
+
+        return result
+    }
+
+    fun add(index: Int, list: List<T>) : Boolean {
+        val temp = data.toMutableList()
+        val result = temp.addAll(index, list)
+        if (result) {
+            this.data = temp.toList()
+        }
+
+        return result
+    }
+
+    fun add(list: List<T>) : Boolean {
+        val temp = data.toMutableList()
+        val result = temp.addAll(list)
+        if (result) {
+            this.data = temp.toList()
+        }
+
+        return result
+    }
+
+    fun remove(index: Int) : T {
+        val temp = data.toMutableList()
+        val result = temp.removeAt(index)
+        this.data = temp.toList()
+
+        return result
+    }
+
+    fun remove(list: List<T>) : Boolean {
+        val temp = data.toMutableList()
+        val result = temp.removeAll(list)
+        if (result) {
+            this.data = temp.toList()
+        }
+
+        return result
+    }
+
+    fun clear() {
+        val temp = data.toMutableList()
+        val result = temp.clear()
+        this.data = temp.toList()
+
+        return result
+    }
+}
+
+//open class ViewHolder(val itemView: View) {
+//    var position: Int = -1
+//}
+
+interface OnBannerClickListener {
+    fun onBannerClicked(view: View, position: Int, model: Data)
+}
+
+interface OnBannerLongClickListener {
+    fun onBannerLongClicked(view: View, position: Int, model: Data)
 }

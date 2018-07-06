@@ -8,14 +8,20 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.seven.easybanner.adapter.BaseAdapter
+import com.seven.easybanner.adapter.OnBannerClickListener
 import com.seven.easybanner.model.Data
 import com.seven.easybanner.model.DataSource
 import kotlinx.android.synthetic.main.activity_test.*
 
 
-class TestActivity : AppCompatActivity() {
+class TestActivity : AppCompatActivity(), OnBannerClickListener {
+
+    override fun onBannerClicked(view: View, position: Int, model: Data) {
+        Toast.makeText(this, "position: $position  txt: ${model.txt}", Toast.LENGTH_SHORT).show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,7 +34,12 @@ class TestActivity : AppCompatActivity() {
         list.add(Data("3", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2b16zuj30ci08cwf4.jpg"))
         list.add(Data("4", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2e7vsaj30ci08cglz.jpg"))
 
-        easyBanner.setAdapter(MyAdapter(this, list))
+        val adapter = MyAdapter(this, list)
+        easyBanner.setAdapter(adapter)
+            .setAutoPlay(true)
+            .start()
+
+        adapter.setOnBannerClickListener(this)
 
         btn_stop.setOnClickListener {
             easyBanner.stop()
@@ -56,16 +67,21 @@ class TestActivity : AppCompatActivity() {
     }
 }
 
-class MyAdapter(context: Context, data: List<Data>) : BaseAdapter(context, data) {
-    override fun onCreatView(context: Context, parent: ViewGroup, position: Int, viewType: Int): View {
+class MyAdapter(context: Context, data: List<Data>) : BaseAdapter<Data>(context, data) {
+    override fun onCreateView(context: Context, parent: ViewGroup, position: Int, viewType: Int): View {
         return LayoutInflater.from(context).inflate(R.layout.item_image_banner, parent, false)
     }
 
-    override fun onDisplay(view: View, position: Int, model: Data) {
-        Glide.with(view.context)
+    override fun onDisplay(holder: View, position: Int, model: Data) {
+        Glide.with(holder.context)
             .load(model.url)
-            .into(view.findViewById(R.id.imageView))
+            .into(holder.findViewById<ImageView>(R.id.imageView))
 
-        view.findViewById<TextView>(R.id.txtInfo).text = model.txt
+        holder.findViewById<TextView>(R.id.txtInfo).text = model.txt
     }
 }
+
+//class MyBannerHolder(view: View) : ViewHolder(view) {
+//    val img = view.findViewById<ImageView>(R.id.imageView)!!
+//    val txtInfo = view.findViewById<TextView>(R.id.txtInfo)!!
+//}
