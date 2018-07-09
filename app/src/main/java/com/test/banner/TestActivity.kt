@@ -3,6 +3,7 @@ package com.test.banner
 import android.content.Context
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.support.annotation.NonNull
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,7 @@ import com.seven.easybanner.adapter.BaseAdapter
 import com.seven.easybanner.adapter.OnBannerClickListener
 import com.seven.easybanner.model.Data
 import com.seven.easybanner.model.DataSource
+import com.seven.easybannerjar.model.DataModel
 import kotlinx.android.synthetic.main.activity_test.*
 
 
@@ -27,35 +29,43 @@ class TestActivity : AppCompatActivity(), OnBannerClickListener {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_test)
 
-        val list = mutableListOf<Data>()
-        list.add(Data("0", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic1xjab4j30ci08cjrv.jpg"))
-        list.add(Data("1", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic21363tj30ci08ct96.jpg"))
-        list.add(Data("2", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic259ohaj30ci08c74r.jpg"))
-        list.add(Data("3", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2b16zuj30ci08cwf4.jpg"))
-        list.add(Data("4", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2e7vsaj30ci08cglz.jpg"))
+//        val list = mutableListOf<Data>()
+//        list.add(Data("0", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic1xjab4j30ci08cjrv.jpg"))
+//        list.add(Data("1", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic21363tj30ci08ct96.jpg"))
+//        list.add(Data("2", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic259ohaj30ci08c74r.jpg"))
+//        list.add(Data("3", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2b16zuj30ci08cwf4.jpg"))
+//        list.add(Data("4", DataSource.Net, "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2e7vsaj30ci08cglz.jpg"))
+//
+//        val adapter = MyAdapter(this, list)
+//        easyBanner.setAdapter(adapter)
+//            .setAutoPlay(true)
+//            .start()
+//
+//        adapter.setOnBannerClickListener(this)
+//
+//        btn_stop.setOnClickListener {
+//            easyBanner.stop()
+//        }
+//
+//        btn_pause.setOnClickListener {
+//            easyBanner.pause()
+//        }
+//
+//        btn_start.setOnClickListener {
+//            easyBanner.start()
+//        }
 
-        val adapter = MyAdapter(this, list)
-        easyBanner.setAdapter(adapter)
+        val list2 = mutableListOf<MyJavaData>()
+        list2.add(MyJavaData("0", "http://ww4.sinaimg.cn/large/006uZZy8jw1faic1xjab4j30ci08cjrv.jpg"))
+        list2.add(MyJavaData("1", "http://ww4.sinaimg.cn/large/006uZZy8jw1faic21363tj30ci08ct96.jpg"))
+        list2.add(MyJavaData("2", "http://ww4.sinaimg.cn/large/006uZZy8jw1faic259ohaj30ci08c74r.jpg"))
+        list2.add(MyJavaData("3", "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2b16zuj30ci08cwf4.jpg"))
+        list2.add(MyJavaData("4", "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2e7vsaj30ci08cglz.jpg"))
+        val myAdapter = MyJavaAdapter(list2)
+
+        javaBanner.setAdapter(myAdapter)
             .setAutoPlay(true)
             .start()
-
-        adapter.setOnBannerClickListener(this)
-
-        btn_stop.setOnClickListener {
-            easyBanner.stop()
-        }
-
-        btn_pause.setOnClickListener {
-            easyBanner.pause()
-        }
-
-        btn_start.setOnClickListener {
-            easyBanner.start()
-        }
-
-//        val myAdapter =
-//
-//        myBanner.setAdapter()
     }
 
     override fun onResume() {
@@ -89,3 +99,26 @@ class MyAdapter(context: Context, data: List<Data>) : BaseAdapter<Data>(context,
 //    val img = view.findViewById<ImageView>(R.id.imageView)!!
 //    val txtInfo = view.findViewById<TextView>(R.id.txtInfo)!!
 //}
+
+class MyJavaData(txt: String, url: String) : DataModel(txt, Net, url) {
+
+}
+
+class MyJavaHolder(view: View) : com.seven.easybannerjar.adapter.BaseAdapter.ViewHolder(view) {
+    val description = itemView.findViewById<TextView>(R.id.txtInfo)!!
+    val img = itemView.findViewById<ImageView>(R.id.imageView)!!
+}
+
+class MyJavaAdapter(data: List<MyJavaData>) : com.seven.easybannerjar.adapter.BaseAdapter<MyJavaData, MyJavaHolder>(data) {
+    override fun onCreateView(parent: ViewGroup, position: Int, viewType: Int): MyJavaHolder {
+        return MyJavaHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_image_banner, parent, false))
+    }
+
+    override fun onDisplay(holder: MyJavaHolder, position: Int, model: MyJavaData) {
+        Glide.with(holder.itemView.context)
+            .load(model.url)
+            .into(holder.img)
+
+        holder.description.text = model.description
+    }
+}

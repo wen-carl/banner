@@ -119,11 +119,19 @@ public class EasyBanner extends FrameLayout implements OnPageChangeListener {
         return this;
     }
 
-    private static Handler mHandler = new Handler();
+    private static final Handler mHandler = new Handler();
     private Runnable mLoopRunnable = new Runnable() {
         @Override
         public void run() {
-
+            if (count > 1 && isAutoPlay && !mTouching) {
+                if (Direction.Positive == direction) {
+                    showNext();
+                } else {
+                    showPrevious();
+                }
+            }
+            
+            mHandler.postDelayed(mLoopRunnable, timeInterval);
         }
     };
 
@@ -140,7 +148,7 @@ public class EasyBanner extends FrameLayout implements OnPageChangeListener {
         }
 
         if (this.isAutoPlay && shouldStart) {
-            ;
+            mHandler.postDelayed(mLoopRunnable, timeInterval);
         }
     }
 
@@ -163,6 +171,7 @@ public class EasyBanner extends FrameLayout implements OnPageChangeListener {
 
     public void pause() {
         this.status = BannerStatus.Paused;
+        mHandler.removeCallbacks(mLoopRunnable);
     }
 
     public void showPrevious() {

@@ -45,9 +45,10 @@
         app:layout_constraintTop_toBottomOf="@+id/easyBanner" />
 
     <com.seven.easybannerjar.EasyBanner
-        android:id="@+id/myBanner"
+        android:id="@+id/javaBanner"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn_pause"

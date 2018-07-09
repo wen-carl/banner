@@ -25,6 +25,10 @@ public abstract class BaseAdapter<T extends DataModel, H extends BaseAdapter.Vie
 
     private OnBannerClickListener mOnClickListener;
     private OnBannerLongClickListener mOnLongClickListener;
+    
+    public BaseAdapter(@NonNull List<T> data) {
+        bindData(data);
+    }
 
     @Override
     @NonNull
@@ -42,7 +46,8 @@ public abstract class BaseAdapter<T extends DataModel, H extends BaseAdapter.Vie
         if (null == holder) {
             holder = onCreateView(container, getRealPosition(position), type);
         }
-
+        
+        holder.position = position;
         container.addView(holder.itemView);
         onDisplay(holder, getRealPosition(position), mMockData.get(position));
 
@@ -82,9 +87,10 @@ public abstract class BaseAdapter<T extends DataModel, H extends BaseAdapter.Vie
         return DEFAULT_TYPE;
     }
 
-    abstract public H onCreateView(ViewGroup parent, int position, int viewType);
+    @NonNull
+    abstract public H onCreateView(@NonNull ViewGroup parent, int position, int viewType);
 
-    abstract public void onDisplay(H holder, int position, T model);
+    abstract public void onDisplay(@NonNull H holder, int position, @NonNull T model);
 
     public void setOnBannerClickListener(OnBannerClickListener listener) {
         mOnClickListener = listener;
@@ -149,7 +155,7 @@ public abstract class BaseAdapter<T extends DataModel, H extends BaseAdapter.Vie
     }
 
     public void bindData(@NonNull List<T> data) {
-        this.data = new ArrayList<>(data);
+        this.data = data;
         updateMockedData();
     }
 
