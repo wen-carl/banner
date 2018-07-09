@@ -52,6 +52,10 @@ class TestActivity : AppCompatActivity(), OnBannerClickListener {
         btn_start.setOnClickListener {
             easyBanner.start()
         }
+
+//        val myAdapter =
+//
+//        myBanner.setAdapter()
     }
 
     override fun onResume() {

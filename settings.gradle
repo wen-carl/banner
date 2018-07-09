@@ -1,1 +1,1 @@
-include ':app',':banner', ':easybanner'
+include ':app',':banner', ':easybanner', ':easybannerjar'
