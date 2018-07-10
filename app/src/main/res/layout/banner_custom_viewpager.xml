@@ -33,7 +33,7 @@
             android:layout_height="40dp"
             android:layout_alignParentRight="true"
             android:layout_margin="8dp"
-            android:background="@drawable/black_background"
+            android:background="@drawable/num_indicator_background"
             android:gravity="center"
             android:text="1/1"
             android:textColor="#ffffff"
