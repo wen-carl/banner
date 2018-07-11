@@ -14,11 +14,7 @@
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
         <activity android:name=".demo.BannerAnimationActivity" />
         <activity android:name=".demo.BannerStyleActivity" />
@@ -30,7 +26,11 @@
             android:name=".demo.CustomViewPagerActivity"/>
 
         <activity android:name=".TestActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
     </application>
 

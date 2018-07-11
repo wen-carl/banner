@@ -1,5 +1,6 @@
 package com.seven.easybannerjar;
 
+import android.content.BroadcastReceiver;
 import android.os.Handler;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
@@ -8,7 +9,6 @@ import android.support.constraint.ConstraintLayout;
 import android.support.v4.view.PagerAdapter;
 import android.util.DisplayMetrics;
 import android.view.View;
-import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 
 import android.content.Context;
@@ -22,10 +22,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.seven.easybannerjar.R.layout;
 import com.seven.easybannerjar.model.DataModel;
-
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -120,11 +117,11 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         super(context, attrs, defStyleAttr);
     }
 
-    public EasyBanner(@NotNull Context context) {
+    public EasyBanner(@NonNull Context context) {
         this(context, null);
     }
 
-    public EasyBanner(@NotNull Context context, @Nullable AttributeSet attrs) {
+    public EasyBanner(@NonNull Context context, @Nullable AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
@@ -132,8 +129,8 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         return mAdapter;
     }
 
-    @NotNull
-    public EasyBanner setAdapter(@NotNull BaseAdapter adapter) {
+    @NonNull
+    public EasyBanner setAdapter(@NonNull BaseAdapter adapter) {
         if (STATUS_NOT_START == mStatus) {
             mAdapter = adapter;
         } else if (STATUS_STOPED == mStatus || STATUS_PAUSED == mStatus){
@@ -165,7 +162,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         return isAutoPlay;
     }
 
-    @NotNull
+    @NonNull
     public final EasyBanner setAutoPlay(boolean enable) {
         switch (mStatus) {
             case STATUS_AUTO_PLAYING:
@@ -195,7 +192,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         return this.mTimeInterval;
     }
 
-    @NotNull
+    @NonNull
     public final EasyBanner setTimeInterval(long interval) {
         mTimeInterval = interval;
         return this;
@@ -231,10 +228,9 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     }
 
     public EasyBanner setIndicatorStyle(@IndicatorStyle int style) {
-        if (STATUS_NOT_START == mStatus) {
-            mIndicatorStyle = style;
-        } else {
-            throw new IllegalArgumentException("Please call this method before the banner start!");
+        mIndicatorStyle = style;
+        if (STATUS_NOT_START != mStatus) {
+            updateIndicatorByPositionByStyle();
         }
 
         return this;
@@ -246,23 +242,23 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     }
 
     private void initView() {
-        ViewGroup mainContent = (ViewGroup) LayoutInflater.from(getContext()).inflate(layout.layout_easy_banner_java, this, true);
+        ViewGroup mainContent = (ViewGroup) LayoutInflater.from(getContext()).inflate(R.layout.layout_easy_banner_java, this, true);
         mViewPager = mainContent.findViewById(R.id.banner_view_pager);
         mViewPager.addOnPageChangeListener(this);
         mViewPager.setAdapter(mAdapter);
 
         View indicatorView = mAdapter.onCreateIndicatorLayout(mainContent, 0, mAdapter.getViewType(0));
-//        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-//        layoutParams.startToStart = mainContent.getId();
-//        layoutParams.endToEnd = mainContent.getId();
-//        layoutParams.bottomToBottom = mainContent.getId();
-//        indicatorView.setLayoutParams(layoutParams);
+        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(indicatorView.getLayoutParams());
+        layoutParams.startToStart = mainContent.getId();
+        layoutParams.endToEnd = mainContent.getId();
+        layoutParams.bottomToBottom = R.id.mainContent;
+        indicatorView.setLayoutParams(layoutParams);
         ConstraintLayout superLayout = mainContent.findViewById(R.id.mainContent);
         superLayout.addView(indicatorView);
         mCircleIndicator = indicatorView.findViewById(R.id.layout_image_indicator);
         mNumIndicator = indicatorView.findViewById(R.id.txt_num_indicator);
         mTitleIndicator = indicatorView.findViewById(R.id.txt_title);
-
+        updateIndicatorByPositionByStyle();
         createCircleIndicator();
         mViewPager.setCurrentItem(1);
     }
@@ -289,36 +285,169 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
             mCircleIndicator.addView(iv);
         }
     }
-
-    private void updateIndicator(int position) {
+    
+    private void updateIndicatorByPositionByStyle() {
+        if (null == mCircleIndicator || null == mNumIndicator || null == mTitleIndicator) {
+            return;
+        }
+        
+        mCircleIndicator.setVisibility(GONE);
+        mNumIndicator.setVisibility(GONE);
+        mTitleIndicator.setVisibility(GONE);
+        
         switch (mIndicatorStyle) {
-            case STYLE_CIRCLE_INDICATOR:
-            case STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE:
-            case STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE:
-                if (null != mCircleIndicator) {
-                    ImageView cancel = mCircleIndicator.findViewById(BASE_INDICATOR_ID + mAdapter.getRealPosition(mCurrentIndex));
-
-                    if (null != cancel) {
-                        cancel.setSelected(false);
-                    }
-
-                    ImageView select = mCircleIndicator.findViewById(BASE_INDICATOR_ID + mAdapter.getRealPosition(position));
-                    if (null != select) {
-                        select.setSelected(true);
-                    }
-                }
+            case STYLE_CIRCLE_INDICATOR: {
+                mCircleIndicator.setVisibility(VISIBLE);
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mCircleIndicator.getLayoutParams());
+                params.startToStart = R.id.indicator_layout;
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToBottom = R.id.indicator_layout;
+                mCircleIndicator.setLayoutParams(params);
+            }
                 break;
-            case STYLE_NUM_INDICATOR:
-            case STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE:
-            case STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE:
-                if (null != mNumIndicator) {
-                    mNumIndicator.setText(String.format("%d/%d", mAdapter.getRealPosition(position), mAdapter.getData().size()));
-                }
+            case STYLE_NUM_INDICATOR: {
+                mNumIndicator.setVisibility(VISIBLE);
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mNumIndicator.getLayoutParams());
+    
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToBottom = R.id.indicator_layout;
+                mNumIndicator.setLayoutParams(params);
+            }
                 break;
-            case STYLE_TITLE:
+            case STYLE_TITLE: {
+                mTitleIndicator.setVisibility(VISIBLE);
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mTitleIndicator.getLayoutParams());
+    
+                params.startToStart = R.id.indicator_layout;
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToBottom = R.id.indicator_layout;
+                mTitleIndicator.setLayoutParams(params);
+            }
+                break;
+            case STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE: {
+                mCircleIndicator.setVisibility(VISIBLE);
+                mTitleIndicator.setVisibility(VISIBLE);
+    
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mCircleIndicator.getLayoutParams());
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToBottom = R.id.indicator_layout;
+                mCircleIndicator.setLayoutParams(params);
+    
+                ConstraintLayout.LayoutParams titleParams = new ConstraintLayout.LayoutParams(mTitleIndicator.getLayoutParams());
+                titleParams.startToStart = R.id.indicator_layout;
+                titleParams.endToStart = R.id.layout_image_indicator;
+                titleParams.bottomToBottom = R.id.indicator_layout;
+                mTitleIndicator.setLayoutParams(titleParams);
+            }
+                break;
+            case STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE: {
+                mCircleIndicator.setVisibility(VISIBLE);
+                mTitleIndicator.setVisibility(VISIBLE);
+                
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mCircleIndicator.getLayoutParams());
+                params.startToStart = R.id.indicator_layout;
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToTop = R.id.txt_title;
+                mCircleIndicator.setLayoutParams(params);
+                
+                ConstraintLayout.LayoutParams titleParams = new ConstraintLayout.LayoutParams(mTitleIndicator.getLayoutParams());
+                titleParams.startToStart = R.id.indicator_layout;
+                titleParams.endToEnd = R.id.indicator_layout;
+                titleParams.bottomToBottom = R.id.indicator_layout;
+                mTitleIndicator.setLayoutParams(titleParams);
+            }
+                break;
+            case STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE: {
+                mNumIndicator.setVisibility(VISIBLE);
+                mTitleIndicator.setVisibility(VISIBLE);
+    
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mNumIndicator.getLayoutParams());
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToBottom = R.id.indicator_layout;
+                mNumIndicator.setLayoutParams(params);
+                
+                ConstraintLayout.LayoutParams titleParams = new ConstraintLayout.LayoutParams(mTitleIndicator.getLayoutParams());
+                titleParams.startToStart = R.id.indicator_layout;
+                titleParams.endToStart = R.id.txt_num_indicator;
+                titleParams.bottomToBottom = R.id.indicator_layout;
+                mTitleIndicator.setLayoutParams(titleParams);
+            }
+                break;
+            case STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE: {
+                mNumIndicator.setVisibility(VISIBLE);
+                mTitleIndicator.setVisibility(VISIBLE);
+    
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mCircleIndicator.getLayoutParams());
+                params.startToStart = R.id.indicator_layout;
+                params.endToEnd = R.id.indicator_layout;
+                params.bottomToTop = R.id.txt_title;
+                mNumIndicator.setLayoutParams(params);
+    
+                ConstraintLayout.LayoutParams titleParams = new ConstraintLayout.LayoutParams(mTitleIndicator.getLayoutParams());
+                titleParams.startToStart = R.id.indicator_layout;
+                titleParams.endToEnd = R.id.indicator_layout;
+                titleParams.bottomToBottom = R.id.indicator_layout;
+                mTitleIndicator.setLayoutParams(titleParams);
+            }
+                break;
             case STYLE_NONE:
             default:
                 break;
+        }
+    }
+
+    private void updateIndicatorIndex(int position) {
+        int realPos = mAdapter.getRealPosition(position);
+        if (realPos != mAdapter.getRealPosition(mCurrentIndex)) {
+            switch (mIndicatorStyle) {
+                case STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE:
+                case STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE:
+                    updateTitleIndicator(realPos);
+                case STYLE_CIRCLE_INDICATOR:
+                    updateCircleIndicator(realPos);
+                    break;
+                case STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE:
+                case STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE:
+                    updateTitleIndicator(realPos);
+                case STYLE_NUM_INDICATOR:
+                    updateNumIndicator(realPos);
+                    break;
+                case STYLE_TITLE:
+                    updateTitleIndicator(realPos);
+                case STYLE_NONE:
+                default:
+                    break;
+            }
+        }
+        
+        mCurrentIndex = position;
+    }
+    
+    private void updateCircleIndicator(int realPos) {
+        if (null != mCircleIndicator) {
+            ImageView cancel = mCircleIndicator.findViewById(BASE_INDICATOR_ID + mAdapter.getRealPosition(mCurrentIndex));
+            if (null != cancel) {
+                cancel.setSelected(false);
+            }
+        
+            ImageView select = mCircleIndicator.findViewById(BASE_INDICATOR_ID + realPos);
+            if (null != select) {
+                select.setSelected(true);
+            }
+        }
+    }
+    
+    private void updateNumIndicator(int realPos) {
+        if (null != mNumIndicator) {
+            mNumIndicator.setText(String.format("%d/%d", realPos + 1, mAdapter.getData().size()));
+        }
+    }
+    
+    private void updateTitleIndicator(int realPos) {
+        if (null != mTitleIndicator) {
+            //mAdapter.onBindIndicator(, , );
+            DataModel model = (DataModel) mAdapter.getData().get(realPos);
+            mTitleIndicator.setText(model.getDescription());
         }
     }
 
@@ -372,17 +501,17 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
 
     public void showPrevious() {
         int index = mCurrentIndex == 0 ? mAdapter.getData().size() : mCurrentIndex - 1;
-        this.show(index);
+        show(index);
     }
 
     public void showNext() {
         int index = mCurrentIndex == mAdapter.getData().size() + 1 ? 1 : mCurrentIndex + 1;
-        this.show(index);
+        show(index);
     }
 
     public void show(int index) {
         int temp = index <= 0 ? 0 : (index <= mAdapter.getData().size() + 1 ? index : mAdapter.getData().size() + 1);
-        this.mViewPager.setCurrentItem(temp);
+        mViewPager.setCurrentItem(temp);
     }
 
     public void onPageScrollStateChanged(int state) {
@@ -403,8 +532,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     }
 
     public void onPageSelected(int position) {
-        updateIndicator(position);
-        mCurrentIndex = position;
+        updateIndicatorIndex(position);
     }
 
     /**
@@ -412,7 +540,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
      * @param ev
      * @return
      */
-    public boolean dispatchTouchEvent(@NotNull MotionEvent ev) {
+    public boolean dispatchTouchEvent(@NonNull MotionEvent ev) {
         int action = ev.getAction();
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_OUTSIDE
                 ) {

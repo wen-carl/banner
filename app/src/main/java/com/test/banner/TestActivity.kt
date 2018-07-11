@@ -75,10 +75,8 @@ class TestActivity : AppCompatActivity(), OnBannerClickListener,
 
         javaBanner.setAdapter(myAdapter)
             .setAutoPlay(true)
+            .setIndicatorStyle(EasyBanner.STYLE_CIRCLE_INDICATOR)
             .start()
-
-        val recycler = RecyclerView(this)
-        recycler.adapter.getItemViewType(0)
     }
 
     override fun load(imageView: ImageView, position: Int, model: MyJavaData) {
