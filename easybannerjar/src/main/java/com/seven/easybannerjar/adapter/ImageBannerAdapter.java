@@ -1,7 +1,6 @@
 package com.seven.easybannerjar.adapter;
 
 import android.support.annotation.NonNull;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,16 +8,13 @@ import android.widget.ImageView;
 
 import com.seven.easybannerjar.R;
 import com.seven.easybannerjar.model.DataModel;
+import com.seven.easybannerjar.EasyBanner.BaseAdapter;
 
 import java.util.List;
 
-public class ImageBannerAdapter<T extends DataModel> extends BaseAdapter<T> {
+public final class ImageBannerAdapter<T extends DataModel> extends BaseAdapter<T> {
 
     private IImageLoader mLoader;
-
-    public ImageBannerAdapter(@NonNull List<T> mData) {
-        this(mData, null);
-    }
 
     public ImageBannerAdapter(@NonNull List<T> mData, IImageLoader loader) {
         super(mData);
@@ -39,7 +35,7 @@ public class ImageBannerAdapter<T extends DataModel> extends BaseAdapter<T> {
         }
     }
 
-    public interface IImageLoader<D> {
+    public interface IImageLoader<D extends DataModel> {
         void load(@NonNull ImageView imageView, int position, @NonNull D model);
     }
 }

@@ -5,8 +5,10 @@ import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
+import android.support.v4.view.PagerAdapter;
 import android.util.DisplayMetrics;
 import android.view.View;
+import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 
 import android.content.Context;
@@ -18,15 +20,17 @@ import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
-import com.seven.easybannerjar.adapter.BaseAdapter;
 import com.seven.easybannerjar.R.layout;
+import com.seven.easybannerjar.model.DataModel;
 
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public final class EasyBanner extends FrameLayout implements OnPageChangeListener {
@@ -68,17 +72,17 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
      * Image banner style
      */
     public static final int STYLE_NONE = 0;
-    public static final int STYLE_ONLY_CIRCLE_INDICATOR = 1;
+    public static final int STYLE_CIRCLE_INDICATOR = 1;
     public static final int STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE = 2;
     public static final int STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE = 3;
-    public static final int STYLE_ONLY_NUM_INDICATOR = 10;
+    public static final int STYLE_NUM_INDICATOR = 10;
     public static final int STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE = 11;
     public static final int STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE = 12;
-    public static final int STYLE_ONLY_TITLE = 20;
+    public static final int STYLE_TITLE = 20;
 
-    @IntDef({STYLE_NONE, STYLE_ONLY_CIRCLE_INDICATOR, STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE, STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE, STYLE_ONLY_NUM_INDICATOR, STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE, STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE, STYLE_ONLY_TITLE})
+    @IntDef({STYLE_NONE, STYLE_CIRCLE_INDICATOR, STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE, STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE, STYLE_NUM_INDICATOR, STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE, STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE, STYLE_TITLE})
     @Retention(RetentionPolicy.SOURCE)
-    private @interface BannerStyle {}
+    private @interface IndicatorStyle {}
 
     private ViewPager mViewPager;
     private BaseAdapter mAdapter;
@@ -87,9 +91,13 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     private @Mode int mMode = MODE_DEFAULT;
     private @BannerStatus int mStatus = STATUS_NOT_START;
     private @Direction int mDirection = DIRECTION_POSITIVE;
-    private @BannerStyle int mBannerStyle = STYLE_ONLY_CIRCLE_INDICATOR;
+    private @IndicatorStyle int mIndicatorStyle = STYLE_CIRCLE_INDICATOR;
 
-    private List<ImageView> mCircleIndicators;
+    private static final int BASE_INDICATOR_ID = 1000;
+    private LinearLayout mCircleIndicator;
+    private TextView mNumIndicator;
+    private TextView mTitleIndicator;
+
     private int mCurrentIndex = 1;
 
     private static final Handler mHandler = new Handler();
@@ -217,29 +225,17 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         return this;
     }
 
-    @BannerStyle
-    public int getBannerStyle() {
-        return mBannerStyle;
+    @IndicatorStyle
+    public int getIndicatorStyle() {
+        return mIndicatorStyle;
     }
 
-    public EasyBanner setBannerStyle(@BannerStyle int style) {
+    public EasyBanner setIndicatorStyle(@IndicatorStyle int style) {
         if (STATUS_NOT_START == mStatus) {
-            mBannerStyle = style;
+            mIndicatorStyle = style;
         } else {
             throw new IllegalArgumentException("Please call this method before the banner start!");
         }
-
-        return this;
-    }
-
-    public EasyBanner setIndicatorPosition(int gravity) {
-
-
-        return this;
-    }
-
-    public EasyBanner setTitlePosition(int gravity) {
-
 
         return this;
     }
@@ -263,20 +259,22 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
 //        indicatorView.setLayoutParams(layoutParams);
         ConstraintLayout superLayout = mainContent.findViewById(R.id.mainContent);
         superLayout.addView(indicatorView);
+        mCircleIndicator = indicatorView.findViewById(R.id.layout_image_indicator);
+        mNumIndicator = indicatorView.findViewById(R.id.txt_num_indicator);
+        mTitleIndicator = indicatorView.findViewById(R.id.txt_title);
 
         createCircleIndicator();
         mViewPager.setCurrentItem(1);
     }
 
     private void createCircleIndicator() {
-        if (null == mCircleIndicators) {
-            mCircleIndicators = new ArrayList<>();
+        if (null == mCircleIndicator) {
+            return;
         }
 
-        mCircleIndicators.clear();
+        mCircleIndicator.removeAllViews();
         DisplayMetrics dm = getContext().getResources().getDisplayMetrics();
         int indicatorSize = dm.widthPixels / 80;
-        LinearLayout indicatorLayout = findViewById(R.id.layout_circle_indicator);
 
         for (int i = 0; i < mAdapter.getData().size(); i ++) {
             ImageView iv = new ImageView(getContext());
@@ -287,8 +285,40 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
             iv.setLayoutParams(params);
             iv.setImageResource(R.drawable.circle_indicator_background);
             iv.setSelected(i == 0);
-            mCircleIndicators.add(iv);
-            indicatorLayout.addView(iv);
+            iv.setId(BASE_INDICATOR_ID + i);
+            mCircleIndicator.addView(iv);
+        }
+    }
+
+    private void updateIndicator(int position) {
+        switch (mIndicatorStyle) {
+            case STYLE_CIRCLE_INDICATOR:
+            case STYLE_TITLE_WITH_CIRCLE_INDICATOR_INSIDE:
+            case STYLE_TITLE_WITH_CIRCLE_INDICATOR_OUTSIDE:
+                if (null != mCircleIndicator) {
+                    ImageView cancel = mCircleIndicator.findViewById(BASE_INDICATOR_ID + mAdapter.getRealPosition(mCurrentIndex));
+
+                    if (null != cancel) {
+                        cancel.setSelected(false);
+                    }
+
+                    ImageView select = mCircleIndicator.findViewById(BASE_INDICATOR_ID + mAdapter.getRealPosition(position));
+                    if (null != select) {
+                        select.setSelected(true);
+                    }
+                }
+                break;
+            case STYLE_NUM_INDICATOR:
+            case STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE:
+            case STYLE_TITLE_WITH_NUM_INDICATOR_OUTSIDE:
+                if (null != mNumIndicator) {
+                    mNumIndicator.setText(String.format("%d/%d", mAdapter.getRealPosition(position), mAdapter.getData().size()));
+                }
+                break;
+            case STYLE_TITLE:
+            case STYLE_NONE:
+            default:
+                break;
         }
     }
 
@@ -377,26 +407,6 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         mCurrentIndex = position;
     }
 
-    private void updateIndicator(int position) {
-        mCircleIndicators.get(getRealPosition(mCurrentIndex)).setSelected(false);
-        mCircleIndicators.get(getRealPosition(position)).setSelected(true);
-    }
-
-    private int getRealPosition(int position) {
-        int real = 0;
-        int count = mAdapter.getData().size();
-        if (count <= 1) {
-            real = 0;
-        } else {
-            real = (position - 1) % count;
-            if (real < 0) {
-                real += count;
-            }
-        }
-
-        return real;
-    }
-
     /**
      * 事件分发，手指按在banner上时停止自动滚动
      * @param ev
@@ -414,6 +424,253 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         }
 
         return super.dispatchTouchEvent(ev);
+    }
+
+    public static abstract class BaseAdapter<T extends DataModel> extends PagerAdapter {
+
+        private static final int DEFAULT_TYPE = -1;
+        private static final int KEY_UNUSED = -1;
+
+        private List<T> mData = new ArrayList<>();
+
+        private List<T> mMockData;
+
+        private HashMap<Number, HashMap<Number, View>> mCachedViewHolders = new HashMap<>();
+        private HashMap<Number, View> mShowingViewHolders = new HashMap<>();
+
+        private OnBannerItemClickListener mOnClickListener;
+        private OnBannerItemLongClickListener mOnLongClickListener;
+
+        public BaseAdapter(@NonNull List<T> mData) {
+            bindData(mData);
+        }
+
+        @Override
+        @NonNull
+        public Object instantiateItem(@NonNull ViewGroup container, int position) {
+
+            int type = getViewType(position);
+            HashMap<Number, View> tempMap = mCachedViewHolders.get(position);
+
+            View view = null;
+            if (null != tempMap) {
+                view = tempMap.get(KEY_UNUSED);
+                tempMap.remove(KEY_UNUSED);
+            }
+
+            if (null == view) {
+                view = onCreateView(container, getRealPosition(position), type);
+            }
+
+            container.addView(view);
+            onDisplay(view, getRealPosition(position), mMockData.get(position));
+
+            mShowingViewHolders.put(position, view);
+            view.setTag(getRealPosition(position));
+            setClickListener(view);
+
+            return view;
+        }
+
+        @Override
+        public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
+            View view = (View) object;
+            container.removeView(view);
+            mShowingViewHolders.remove(position);
+
+            int type = getViewType(position);
+            HashMap<Number, View> tempMap = mCachedViewHolders.get(type);
+            if (null == tempMap) {
+                tempMap = new HashMap<>();
+                mCachedViewHolders.put(KEY_UNUSED, tempMap);
+            }
+            tempMap.put(type, view);
+        }
+
+        @Override
+        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
+            return view == object;
+        }
+
+        @Override
+        public int getCount() {
+            return mMockData.size();
+        }
+
+        public int getViewType(int position) {
+            return DEFAULT_TYPE;
+        }
+
+        @NonNull
+        abstract public View onCreateView(@NonNull ViewGroup parent, int position, int viewType);
+
+        abstract public void onDisplay(@NonNull View view, int position, @NonNull T model);
+
+        public View onCreateIndicatorLayout(@NonNull ViewGroup parent, int position, int viewType) {
+            return LayoutInflater.from(parent.getContext()).inflate(R.layout.layout_default_indicator_content, parent, false);
+        }
+
+        protected void onBindIndicator(@NonNull View view, int position, T model) {
+
+        }
+
+        public void setOnBannerItemClickListener(OnBannerItemClickListener listener) {
+            mOnClickListener = listener;
+        }
+
+        public void setOnBannerItemLongClickListener(OnBannerItemLongClickListener listener) {
+            mOnLongClickListener = listener;
+        }
+
+        private void setClickListener(final View view) {
+            if (!view.hasOnClickListeners()) {
+                if (null != mOnClickListener) {
+                    view.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            final int position = (int)view.getTag();
+                            mOnClickListener.onBannerClicked(v, position, mData.get(position));
+                        }
+                    });
+                }
+            }
+
+            // TODO: 2018/7/9  Need to fix
+            view.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    if (null != mOnLongClickListener) {
+                        int position = (int)view.getTag();
+                        mOnClickListener.onBannerClicked(v, position, mData.get(position));
+
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            });
+        }
+
+        protected int getRealPosition(int position) {
+            int real = 0;
+            if (mData.size() <= 1) {
+                real = 0;
+            } else {
+                real = (position - 1) % mData.size();
+                if (real < 0) {
+                    real += mData.size();
+                }
+            }
+
+            return real;
+        }
+
+        private void updateMockedData() {
+            mMockData = new ArrayList<>(mData);
+            if (mData.size() > 1) {
+                T first = mData.get(0);
+                T last = mData.get(mData.size() - 1);
+
+                mMockData.add(0, last);
+                mMockData.add(first);
+            }
+
+            notifyDataSetChanged();
+        }
+
+        public void bindData(@NonNull List<T> mData) {
+            this.mData = mData;
+            updateMockedData();
+        }
+
+        public List<T> getData() {
+            return mData;
+        }
+
+    /*
+    fun add(index: Int, model: T) {
+        val temp = mData.toMutableList()
+        temp.add(index, model)
+        this.mData = temp.toList()
+    }
+
+    fun add(model: T) : Boolean {
+        val temp = mData.toMutableList()
+        val result = temp.add(model)
+        if (result) {
+            this.mData = temp.toList()
+        }
+
+        return result
+    }
+
+    fun add(index: Int, list: List<T>) : Boolean {
+        val temp = mData.toMutableList()
+        val result = temp.addAll(index, list)
+        if (result) {
+            this.mData = temp.toList()
+        }
+
+        return result
+    }
+
+    fun add(list: List<T>) : Boolean {
+        val temp = mData.toMutableList()
+        val result = temp.addAll(list)
+        if (result) {
+            this.mData = temp.toList()
+        }
+
+        return result
+    }
+
+    fun remove(index: Int) : T {
+        val temp = mData.toMutableList()
+        val result = temp.removeAt(index)
+        this.mData = temp.toList()
+
+        return result
+    }
+
+    fun remove(list: List<T>) : Boolean {
+        val temp = mData.toMutableList()
+        val result = temp.removeAll(list)
+        if (result) {
+            this.mData = temp.toList()
+        }
+
+        return result
+    }
+
+    fun clear() {
+        val temp = mData.toMutableList()
+        val result = temp.clear()
+        this.mData = temp.toList()
+
+        return result
+    }
+    */
+
+    /*
+    public static class ViewHolder {
+        public int position = -1;
+        public View itemView;
+
+        public ViewHolder() {}
+
+        public ViewHolder(View itemView) {
+            this.itemView = itemView;
+        }
+    }
+    */
+    }
+
+    public interface OnBannerItemClickListener {
+        void onBannerClicked(@NonNull View view, int  position, @NonNull DataModel model);
+    }
+
+    public interface OnBannerItemLongClickListener {
+        void onBannerLongClicked(View view, int  position, DataModel model);
     }
 }
 

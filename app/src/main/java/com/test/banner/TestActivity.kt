@@ -3,7 +3,7 @@ package com.test.banner
 import android.content.Context
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.support.annotation.NonNull
+import android.support.v7.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,13 +15,14 @@ import com.seven.easybanner.adapter.BaseAdapter
 import com.seven.easybanner.adapter.OnBannerClickListener
 import com.seven.easybanner.model.Data
 import com.seven.easybanner.model.DataSource
+import com.seven.easybannerjar.EasyBanner
 import com.seven.easybannerjar.adapter.ImageBannerAdapter
 import com.seven.easybannerjar.model.DataModel
 import kotlinx.android.synthetic.main.activity_test.*
 
 
 class TestActivity : AppCompatActivity(), OnBannerClickListener,
-    com.seven.easybannerjar.adapter.BaseAdapter.OnBannerClickListener,
+    EasyBanner.OnBannerItemClickListener,
     ImageBannerAdapter.IImageLoader<MyJavaData> {
 
     override fun onBannerClicked(view: View, position: Int, model: DataModel) {
@@ -70,11 +71,14 @@ class TestActivity : AppCompatActivity(), OnBannerClickListener,
         list2.add(MyJavaData("4", "http://ww4.sinaimg.cn/large/006uZZy8jw1faic2e7vsaj30ci08cglz.jpg"))
         val myAdapter = ImageBannerAdapter(list2, this)
 
-        myAdapter.setOnBannerClickListener(this)
+        myAdapter.setOnBannerItemClickListener(this)
 
         javaBanner.setAdapter(myAdapter)
             .setAutoPlay(true)
             .start()
+
+        val recycler = RecyclerView(this)
+        recycler.adapter.getItemViewType(0)
     }
 
     override fun load(imageView: ImageView, position: Int, model: MyJavaData) {
@@ -124,7 +128,7 @@ class MyJavaData(txt: String, url: String) : DataModel(txt, Net, url) {
 //    val img = itemView.findViewById<ImageView>(R.id.imageView)!!
 //}
 
-class MyJavaAdapter(data: List<MyJavaData>) : com.seven.easybannerjar.adapter.BaseAdapter<MyJavaData>(data) {
+class MyJavaAdapter(data: List<MyJavaData>) : EasyBanner.BaseAdapter<MyJavaData>(data) {
     override fun onCreateView(parent: ViewGroup, position: Int, viewType: Int): View {
         return LayoutInflater.from(parent.context).inflate(R.layout.item_image_banner, parent, false)
     }
