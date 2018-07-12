@@ -1,6 +1,5 @@
 package com.seven.easybannerjar;
 
-import android.content.BroadcastReceiver;
 import android.os.Handler;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
@@ -8,11 +7,13 @@ import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.view.PagerAdapter;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 
 import android.content.Context;
 import android.support.v4.view.ViewPager;
+import android.support.v4.view.ViewPager.PageTransformer;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -23,6 +24,23 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.seven.easybannerjar.model.DataModel;
+import com.seven.easybannerjar.transformer.AccordionTransformer;
+import com.seven.easybannerjar.transformer.BackgroundToForegroundTransformer;
+import com.seven.easybannerjar.transformer.CubeInTransformer;
+import com.seven.easybannerjar.transformer.CubeOutTransformer;
+import com.seven.easybannerjar.transformer.DefaultTransformer;
+import com.seven.easybannerjar.transformer.DepthPageTransformer;
+import com.seven.easybannerjar.transformer.FlipHorizontalTransformer;
+import com.seven.easybannerjar.transformer.FlipVerticalTransformer;
+import com.seven.easybannerjar.transformer.ForegroundToBackgroundTransformer;
+import com.seven.easybannerjar.transformer.RotateDownTransformer;
+import com.seven.easybannerjar.transformer.RotateUpTransformer;
+import com.seven.easybannerjar.transformer.ScaleInOutTransformer;
+import com.seven.easybannerjar.transformer.StackTransformer;
+import com.seven.easybannerjar.transformer.TabletTransformer;
+import com.seven.easybannerjar.transformer.ZoomInTransformer;
+import com.seven.easybannerjar.transformer.ZoomOutSlideTransformer;
+import com.seven.easybannerjar.transformer.ZoomOutTranformer;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -32,6 +50,8 @@ import java.util.List;
 
 public final class EasyBanner extends FrameLayout implements OnPageChangeListener {
 
+    private static final String TAG = EasyBanner.class.getSimpleName();
+
     /**
      * Banner mStatus
      */
@@ -39,9 +59,9 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     public static final int STATUS_AUTO_PLAYING = 1;
     public static final int STATUS_MANUAL_LAYING = 2;
     public static final int STATUS_PAUSED = 3;
-    public static final int STATUS_STOPED = 4;
+    public static final int STATUS_STOPPED = 4;
 
-    @IntDef({STATUS_NOT_START, STATUS_AUTO_PLAYING, STATUS_MANUAL_LAYING, STATUS_PAUSED, STATUS_STOPED})
+    @IntDef({STATUS_NOT_START, STATUS_AUTO_PLAYING, STATUS_MANUAL_LAYING, STATUS_PAUSED, STATUS_STOPPED})
     @Retention(RetentionPolicy.SOURCE)
     private @interface BannerStatus {}
 
@@ -56,14 +76,14 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     private @interface Direction {}
 
     /**
-     * UI mode
+     * Indicator mode
      */
     public static final int MODE_DEFAULT = 0;
     public static final int MODE_CUSTOM = 1;
 
     @IntDef({MODE_DEFAULT, MODE_CUSTOM})
     @Retention(RetentionPolicy.SOURCE)
-    private @interface Mode {}
+    private @interface IndicatorMode {}
 
     /**
      * Image banner style
@@ -85,12 +105,13 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     private BaseAdapter mAdapter;
     private boolean isAutoPlay = true;
     private long mTimeInterval = 2000L;
-    private @Mode int mMode = MODE_DEFAULT;
+    private @IndicatorMode int mIndicatorMode = MODE_DEFAULT;
     private @BannerStatus int mStatus = STATUS_NOT_START;
     private @Direction int mDirection = DIRECTION_POSITIVE;
     private @IndicatorStyle int mIndicatorStyle = STYLE_CIRCLE_INDICATOR;
 
     private static final int BASE_INDICATOR_ID = 1000;
+    private View mIndicatorView;
     private LinearLayout mCircleIndicator;
     private TextView mNumIndicator;
     private TextView mTitleIndicator;
@@ -115,6 +136,10 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
 
     public EasyBanner(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+
+        ViewGroup mainContent = (ViewGroup) LayoutInflater.from(getContext()).inflate(R.layout.layout_easy_banner_java, this, true);
+        mViewPager = mainContent.findViewById(R.id.banner_view_pager);
+        mViewPager.addOnPageChangeListener(this);
     }
 
     public EasyBanner(@NonNull Context context) {
@@ -131,29 +156,8 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
 
     @NonNull
     public EasyBanner setAdapter(@NonNull BaseAdapter adapter) {
-        if (STATUS_NOT_START == mStatus) {
-            mAdapter = adapter;
-        } else if (STATUS_STOPED == mStatus || STATUS_PAUSED == mStatus){
-            mAdapter = adapter;
-            mViewPager.setAdapter(adapter);
-            mViewPager.setCurrentItem(1);
-        } else {
-            throw new IllegalStateException("Adapter can not be replaced when it is playing!");
-        }
-
-        switch (mStatus) {
-            case STATUS_PAUSED:
-            case STATUS_STOPED:
-                mViewPager.setAdapter(adapter);
-                mViewPager.setCurrentItem(1);
-            case STATUS_NOT_START:
-                mAdapter = adapter;
-                break;
-            case STATUS_AUTO_PLAYING:
-            case STATUS_MANUAL_LAYING:
-            default:
-                throw new IllegalArgumentException("Adapter can not be replaced when it is playing!");
-        }
+        mAdapter = adapter;
+        mViewPager.setAdapter(adapter);
 
         return this;
     }
@@ -179,7 +183,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
                 isAutoPlay = enable;
                 break;
             case STATUS_PAUSED:
-            case STATUS_STOPED:
+            case STATUS_STOPPED:
             case STATUS_MANUAL_LAYING:
             default:
                 break;
@@ -208,14 +212,14 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         return this;
     }
 
-    @Mode
-    public int getMode() {
-        return mMode;
+    @IndicatorMode
+    public int getIndicatorMode() {
+        return mIndicatorMode;
     }
 
-    public EasyBanner setMode(@Mode int mode) {
+    public EasyBanner setIndicatorMode(@IndicatorMode int mode) {
         if (STATUS_NOT_START == mStatus) {
-            mMode = mode;
+            mIndicatorMode = mode;
         } else {
             throw new IllegalArgumentException("Please call this method before the banner start!");
         }
@@ -236,31 +240,36 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         return this;
     }
 
+    public EasyBanner setPageTransformer(Class<? extends PageTransformer> transformer) {
+        try {
+            mViewPager.setPageTransformer(true, transformer.newInstance());
+        } catch (InstantiationException | IllegalAccessException e) {
+            Log.e(TAG, e.getLocalizedMessage(), e);
+        }
+
+        return this;
+    }
+
     @BannerStatus
     public int getStatus() {
         return mStatus;
     }
 
     private void initView() {
-        ViewGroup mainContent = (ViewGroup) LayoutInflater.from(getContext()).inflate(R.layout.layout_easy_banner_java, this, true);
-        mViewPager = mainContent.findViewById(R.id.banner_view_pager);
-        mViewPager.addOnPageChangeListener(this);
-        mViewPager.setAdapter(mAdapter);
-
-        View indicatorView = mAdapter.onCreateIndicatorLayout(mainContent, 0, mAdapter.getViewType(0));
-        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(indicatorView.getLayoutParams());
-        layoutParams.startToStart = mainContent.getId();
-        layoutParams.endToEnd = mainContent.getId();
+        ConstraintLayout superLayout = findViewById(R.id.mainContent);
+        mIndicatorView = mAdapter.onCreateIndicatorLayout(this, 0, mAdapter.getViewType(0));
+        ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(mIndicatorView.getLayoutParams());
+        layoutParams.startToStart = R.id.mainContent;
+        layoutParams.endToEnd = R.id.mainContent;
         layoutParams.bottomToBottom = R.id.mainContent;
-        indicatorView.setLayoutParams(layoutParams);
-        ConstraintLayout superLayout = mainContent.findViewById(R.id.mainContent);
-        superLayout.addView(indicatorView);
-        mCircleIndicator = indicatorView.findViewById(R.id.layout_image_indicator);
-        mNumIndicator = indicatorView.findViewById(R.id.txt_num_indicator);
-        mTitleIndicator = indicatorView.findViewById(R.id.txt_title);
+        mIndicatorView.setLayoutParams(layoutParams);
+
+        superLayout.addView(mIndicatorView);
+        mCircleIndicator = mIndicatorView.findViewById(R.id.layout_image_indicator);
+        mNumIndicator = mIndicatorView.findViewById(R.id.txt_num_indicator);
+        mTitleIndicator = mIndicatorView.findViewById(R.id.txt_title);
         updateIndicatorByPositionByStyle();
         createCircleIndicator();
-        mViewPager.setCurrentItem(1);
     }
 
     private void createCircleIndicator() {
@@ -280,7 +289,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
             params.rightMargin = 5;
             iv.setLayoutParams(params);
             iv.setImageResource(R.drawable.circle_indicator_background);
-            iv.setSelected(i == 0);
+            iv.setSelected(i == mAdapter.getRealPosition(mCurrentIndex));
             iv.setId(BASE_INDICATOR_ID + i);
             mCircleIndicator.addView(iv);
         }
@@ -445,10 +454,11 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     
     private void updateTitleIndicator(int realPos) {
         if (null != mTitleIndicator) {
-            //mAdapter.onBindIndicator(, , );
             DataModel model = (DataModel) mAdapter.getData().get(realPos);
             mTitleIndicator.setText(model.getDescription());
         }
+
+        mAdapter.bindIndicator(mIndicatorView, realPos);
     }
 
     public final void start() {
@@ -460,7 +470,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
                 break;
             case STATUS_AUTO_PLAYING:
             case STATUS_PAUSED:
-            case STATUS_STOPED:
+            case STATUS_STOPPED:
                 shouldStart &= true;
                 break;
             case STATUS_MANUAL_LAYING:
@@ -475,7 +485,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
     }
 
     public final void stop() {
-        this.mStatus = STATUS_STOPED;
+        this.mStatus = STATUS_STOPPED;
         mHandler.removeCallbacks(mLoopRunnable);
         
         if (mCurrentIndex != 1) {
@@ -489,8 +499,8 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
                     position = 2;
             }
 
-            this.mViewPager.setCurrentItem(position, false);
-            this.mViewPager.setCurrentItem(1);
+            mViewPager.setCurrentItem(position, false);
+            show(1);
         }
     }
 
@@ -638,9 +648,11 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
             return LayoutInflater.from(parent.getContext()).inflate(R.layout.layout_default_indicator_content, parent, false);
         }
 
-        protected void onBindIndicator(@NonNull View view, int position, T model) {
-
+        public final void bindIndicator(@NonNull View view, int position) {
+            onBindIndicator(view, position, mData.get(position));
         }
+
+        public void onBindIndicator(@NonNull View view, int position, T model) { }
 
         public void setOnBannerItemClickListener(OnBannerItemClickListener listener) {
             mOnClickListener = listener;
@@ -799,6 +811,26 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
 
     public interface OnBannerItemLongClickListener {
         void onBannerLongClicked(View view, int  position, DataModel model);
+    }
+
+    public static class Transformer {
+        public static final Class<? extends PageTransformer> Default = DefaultTransformer.class;
+        public static final Class<? extends PageTransformer> Accordion = AccordionTransformer.class;
+        public static final Class<? extends PageTransformer> BackgroundToForeground = BackgroundToForegroundTransformer.class;
+        public static final Class<? extends PageTransformer> ForegroundToBackground = ForegroundToBackgroundTransformer.class;
+        public static final Class<? extends PageTransformer> CubeIn = CubeInTransformer.class;
+        public static final Class<? extends PageTransformer> CubeOut = CubeOutTransformer.class;
+        public static final Class<? extends PageTransformer> DepthPage = DepthPageTransformer.class;
+        public static final Class<? extends PageTransformer> FlipHorizontal = FlipHorizontalTransformer.class;
+        public static final Class<? extends PageTransformer> FlipVertical = FlipVerticalTransformer.class;
+        public static final Class<? extends PageTransformer> RotateDown = RotateDownTransformer.class;
+        public static final Class<? extends PageTransformer> RotateUp = RotateUpTransformer.class;
+        public static final Class<? extends PageTransformer> ScaleInOut = ScaleInOutTransformer.class;
+        public static final Class<? extends PageTransformer> Stack = StackTransformer.class;
+        public static final Class<? extends PageTransformer> Tablet = TabletTransformer.class;
+        public static final Class<? extends PageTransformer> ZoomIn = ZoomInTransformer.class;
+        public static final Class<? extends PageTransformer> ZoomOut = ZoomOutTranformer.class;
+        public static final Class<? extends PageTransformer> ZoomOutSlide = ZoomOutSlideTransformer.class;
     }
 }
 
