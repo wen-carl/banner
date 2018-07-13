@@ -74,9 +74,9 @@ class TestActivity : AppCompatActivity(), OnBannerClickListener,
         myAdapter.setOnBannerItemClickListener(this)
 
         javaBanner.setAdapter(myAdapter)
-            .setAutoPlay(true)
-            .setIndicatorStyle(EasyBanner.STYLE_TITLE_WITH_NUM_INDICATOR_INSIDE)
-            .setPageTransformer(EasyBanner.Transformer.Accordion)
+            .setAutoPlay(false)
+            .setIndicatorStyle(EasyBanner.STYLE_CIRCLE_INDICATOR)
+            .setPageTransformer(EasyBanner.Transformer.Default)
             .start()
     }
 

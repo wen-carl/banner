@@ -71,6 +71,7 @@ public class BannerAnimationActivity extends AppCompatActivity implements Adapte
 
         banner.setImages(App.images)
                 .setImageLoader(new GlideImageLoader())
+                .setPageTransformer(true, new AccordionTransformer())
                 .setOnBannerListener(this)
                 .start();
 

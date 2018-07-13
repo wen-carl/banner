@@ -1,24 +1,23 @@
 package com.seven.easybannerjar;
 
+import android.content.Context;
 import android.os.Handler;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.constraint.ConstraintLayout;
 import android.support.v4.view.PagerAdapter;
+import android.support.v4.view.ViewPager;
+import android.support.v4.view.ViewPager.OnPageChangeListener;
+import android.support.v4.view.ViewPager.PageTransformer;
+import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.View;
-import android.widget.FrameLayout;
-
-import android.content.Context;
-import android.support.v4.view.ViewPager;
-import android.support.v4.view.ViewPager.PageTransformer;
-import android.support.v4.view.ViewPager.OnPageChangeListener;
-import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -270,6 +269,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
         mTitleIndicator = mIndicatorView.findViewById(R.id.txt_title);
         updateIndicatorByPositionByStyle();
         createCircleIndicator();
+        show(mCurrentIndex);
     }
 
     private void createCircleIndicator() {
@@ -386,7 +386,7 @@ public final class EasyBanner extends FrameLayout implements OnPageChangeListene
                 mNumIndicator.setVisibility(VISIBLE);
                 mTitleIndicator.setVisibility(VISIBLE);
     
-                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mCircleIndicator.getLayoutParams());
+                ConstraintLayout.LayoutParams params = new ConstraintLayout.LayoutParams(mNumIndicator.getLayoutParams());
                 params.startToStart = R.id.indicator_layout;
                 params.endToEnd = R.id.indicator_layout;
                 params.bottomToTop = R.id.txt_title;
